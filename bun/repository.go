@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-core-fx/usersfx"
 	"github.com/google/uuid"
@@ -55,7 +56,7 @@ func (r *Repository) RegisterOrLogin(ctx context.Context, ident usersfx.Identity
 			Model(newIdentity).
 			Exec(ctx); err != nil {
 			// Check if the error is a duplicate key error (unique constraint violation)
-			if db.IsDuplicateKeyError(err) {
+			if isDuplicateKeyError(err) {
 				// Another concurrent request created this identity, signal to fetch existing user
 				return usersfx.ErrIdentityExists
 			}
@@ -117,4 +118,17 @@ func (r *Repository) GetUser(ctx context.Context, userID string) (*usersfx.User,
 	}
 
 	return existingUser.toDomain(), nil
+}
+
+// isDuplicateKeyError reports whether err is a unique-constraint violation
+// as reported by SQLite, PostgreSQL or MySQL.
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := err.Error()
+	return strings.Contains(msg, "UNIQUE constraint failed") ||
+		strings.Contains(msg, "duplicate key value violates unique constraint") ||
+		strings.Contains(msg, "Duplicate entry")
 }
