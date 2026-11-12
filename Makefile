@@ -1,17 +1,15 @@
-.PHONY: all version fmt lint test coverage benchmark air deps release clean build help
+.PHONY: all version fmt lint test coverage benchmark air deps gen release clean build help
 
 BINARY_NAME := $(shell basename $(PWD))
 GIT_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
 VERSION ?= $(GIT_VERSION)
-DOCKER_CR ?= $(shell basename $$(dirname $(PWD)))
-DOCKER_IMAGE := ${DOCKER_CR}/$(BINARY_NAME):$(VERSION)
 
 all: fmt lint coverage ## Run all tests and checks
 
 version: ## Display current version
 	@echo "Current version: $(VERSION)"
 
-fmt: ## Format code
+fmt: gen ## Format code
 	golangci-lint fmt
 
 lint: ## Run linter
@@ -37,6 +35,9 @@ air: ## Run development server
 
 deps: ## Install dependencies
 	go mod download
+
+gen: ## Generate code
+	go generate ./...
 
 release: ## Create release
 	goreleaser release --snapshot --clean
