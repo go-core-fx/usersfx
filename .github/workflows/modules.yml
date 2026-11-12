@@ -1,0 +1,57 @@
+name: Nested modules
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "**.go"
+      - "**/go.mod"
+      - "**/go.sum"
+      - ".golangci.yml"
+      - "Makefile"
+      - ".github/workflows/**"
+  pull_request:
+    branches: [master]
+    paths:
+      - "**.go"
+      - "**/go.mod"
+      - "**/go.sum"
+      - ".golangci.yml"
+      - "Makefile"
+      - ".github/workflows/**"
+
+concurrency:
+  group: ${{ github.workflow }}/${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nested:
+    name: Check nested modules
+    runs-on: ubuntu-latest
+    steps:
+      # step 1: checkout repository code
+      - name: Checkout code into workspace directory
+        uses: actions/checkout@v4
+
+      # step 2: set up go
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: |
+            **/go.sum
+
+      # step 3: install golangci-lint (same version pinning as the Go workflow)
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          install-only: true
+
+      # step 4: build, vet, test and lint every nested module (auto-discovered by make)
+      - name: Check nested modules
+        run: make nested

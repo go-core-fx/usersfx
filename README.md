@@ -47,7 +47,7 @@
 - **Fx module** — `Module()` registers module `"users"` and decorates the injected `*zap.Logger` with that name
 - **bun repository** — the `github.com/go-core-fx/usersfx/bun` submodule maps `users` / `user_identities` tables (timestamps via `bunfx.TimedModel`), registers a user and identity in one transaction and handles the concurrent-registration race
 - **Strict lint config** — a v2.14.0 golangci-lint configuration with a large strict-but-practical linter set
-- **Makefile + CI** — formatting, linting, race-enabled tests, coverage, benchmarks, and a GitHub Actions workflow that runs them
+- **Makefile + CI** — formatting, linting, race-enabled tests, coverage, benchmarks, nested-module checks, and GitHub Actions workflows that run them
 
 This is a library, not an application: it reads **no environment variables** of its own and has no configuration file. `DEBUG` is read by the [`go-core-fx/logger`](https://github.com/go-core-fx/logger) dependency, and `TZ`/`DEBUG` are set for the development server by `make air` — see [Configuration](#configuration).
 
@@ -148,12 +148,13 @@ This module itself reads no environment variables. The table below lists everyth
 
 | Target           | Description                                                            |
 | ---------------- | ---------------------------------------------------------------------- |
-| `make all`       | Run all checks: `fmt`, `lint`, `coverage`                              |
+| `make all`       | Run all checks: `fmt`, `lint`, `coverage`, `nested`                      |
 | `make version`   | Display the current version (from `git describe`, defaults to `0.0.0`) |
 | `make fmt`       | Run `go generate ./...`, then `golangci-lint fmt`                      |
 | `make lint`      | Run `golangci-lint run --timeout=5m`                                   |
 | `make test`      | Run tests with race detector, shuffle and atomic coverage              |
 | `make coverage`  | Produce `coverage.out` and an HTML report (`coverage.html`)            |
+| `make nested`    | Build, vet, test and lint every nested module (auto-discovered `go.mod` directories below the root) |
 | `make benchmark` | Run benchmarks into `benchmark.txt`                                    |
 | `make air`       | Run the development server with air (`TZ=UTC DEBUG=1`)                 |
 | `make deps`      | Download module dependencies                                           |
@@ -171,6 +172,8 @@ The [Go workflow](.github/workflows/go.yml) runs on pushes to `master` and on pu
 - **Test** — race-enabled, shuffled tests with coverage uploaded to [Codecov](https://codecov.io/)
 - **Benchmark** — runs `go test -bench`, keeps history in the Actions cache, uploads results when benchmarks exist and fails the job on a performance alert
 - **E2E Test** — present but disabled (`if: false`)
+
+The [Nested modules workflow](.github/workflows/modules.yml) runs `make nested` on the same triggers: root patterns like `./...` stop at a nested module's boundary, so each module (e.g. [`bun`](./bun)) gets its own build, vet, test and lint pass. Discovery lives in the Makefile — any directory with its own `go.mod` is picked up automatically.
 
 A second workflow marks issues and pull requests stale after 7 days of inactivity and closes them 7 days later.
 
